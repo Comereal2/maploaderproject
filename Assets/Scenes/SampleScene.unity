@@ -730,8 +730,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5730e3d850b1f3846aedeb170ab6cd1e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  arrayDirectory: {fileID: 102900000, guid: 7ad58213fc59872448bae21a0c42800a, type: 3}
+  imageOutlineMaterial: {fileID: 2100000, guid: 3a2cb28c84665ee4b971f347f5b99495, type: 2}
   imageAmountPerRow: 4
+  borderColor: {r: 0, g: 0, b: 0, a: 1}
+  borderThickness: 5
+  folderReference: {fileID: 102900000, guid: 7ad58213fc59872448bae21a0c42800a, type: 3}
+  resourcesPath: Resources
 --- !u!1 &833678133
 GameObject:
   m_ObjectHideFlags: 0

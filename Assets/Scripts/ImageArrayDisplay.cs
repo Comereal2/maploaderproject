@@ -1,40 +1,55 @@
-using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ImageArrayDisplay : MonoBehaviour
 {
-    [SerializeField] private DefaultAsset arrayDirectory;
+    [SerializeField] private Material imageOutlineMaterial;
     [SerializeField] private int imageAmountPerRow;
+
+    [Header("Image border settings")]
+    [SerializeField] private Color borderColor = Color.black;
+    [SerializeField] private float borderThickness = 1f;
+
+#if UNITY_EDITOR
+    [Header("Folder from Assets/Resources/...")]
+    [SerializeField] private DefaultAsset folderReference;
+#endif
+
+    [Header("Retrieved folder path, do not edit")]
+    [SerializeField] private string resourcesPath;
 
     private void Start()
     {
-        if (arrayDirectory != null)
+        if (resourcesPath != null)
         {
-            string path = AssetDatabase.GetAssetPath(arrayDirectory);
-            string[] files = Directory.GetFiles(path, "*.*");
+            imageOutlineMaterial.SetColor("_OutlineColor", borderColor);
+            imageOutlineMaterial.SetFloat("_OutlineThickness", borderThickness);
+            Sprite[] files = Resources.LoadAll<Sprite>(resourcesPath);
+            files = files.OrderBy(s => ExtractNumber(s.name)).ToArray();
             int currentRow = 0;
             int currentCol = 0;
             for (int i = 0; i < files.Length; i++)
             {
-                byte[] fileData = File.ReadAllBytes(files[i]);
-                Texture2D texture = new Texture2D(2, 2);
-                texture.LoadImage(fileData);
-                Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+                Sprite sprite = files[i];
 
-                currentCol++;
-                if (currentCol < imageAmountPerRow)
-                {
-                    GameObject image = new GameObject();
-                    image.AddComponent<SpriteRenderer>().sprite = sprite;
-                    image.name = sprite.name;
-                    image.transform.position = new Vector3(transform.position.x + currentCol * (texture.width + 5), transform.position.y + currentRow * (texture.height + 5), transform.position.z);
-                }
-                else
+                if(currentCol >= imageAmountPerRow)
                 {
                     currentCol = 0;
                     currentRow++;
                 }
+
+                GameObject imageObject = new GameObject(sprite.name);
+                imageObject.transform.SetParent(transform);
+                imageObject.transform.position = new Vector3(transform.position.x + currentCol * (sprite.rect.width + 5), transform.position.y - currentRow * (sprite.rect.height + 5), transform.position.z);
+                
+                Image image = imageObject.AddComponent<Image>();
+                image.sprite = sprite;
+                image.material = imageOutlineMaterial;
+
+                currentCol++;
             }
         }
         else
@@ -42,4 +57,35 @@ public class ImageArrayDisplay : MonoBehaviour
             Debug.LogWarning("No folder selected for the image array.");
         }
     }
+
+    private int ExtractNumber(string name)
+    {
+        var match = Regex.Match(name, @"(\d+)$");
+        if (match.Success)
+        {
+            return int.Parse(match.Value);
+        }
+        return int.MaxValue;
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (folderReference == null) return;
+
+        string fullPath = AssetDatabase.GetAssetPath(folderReference);
+
+        int resourcesIndex = fullPath.IndexOf("Resources/");
+        if (resourcesIndex >= 0)
+        {
+            string relPath = fullPath.Substring(resourcesIndex + "Resources/".Length);
+            relPath = relPath.TrimEnd('/');
+            resourcesPath = relPath;
+        }
+        else
+        {
+            Debug.LogWarning("The folder must be inside a Resources folder.");
+        }
+    }
+#endif
 }
