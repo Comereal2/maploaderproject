@@ -6,12 +6,15 @@ using UnityEngine.UI;
 
 public class ImageArrayDisplay : MonoBehaviour
 {
-    [SerializeField] private Material imageOutlineMaterial;
+    [Header("Image information")]
+    [SerializeField] private float imageScale = 1f;
+    [SerializeField] private float imageOffset = 10f;
     [SerializeField] private int imageAmountPerRow;
+    [SerializeField] private Sprite outlineSprite;
 
-    [Header("Image border settings")]
+    /*[Header("Image border settings")]
     [SerializeField] private Color borderColor = Color.black;
-    [SerializeField] private float borderThickness = 1f;
+    [SerializeField] private float borderThickness = 1f;*/
 
 #if UNITY_EDITOR
     [Header("Folder from Assets/Resources/...")]
@@ -25,8 +28,6 @@ public class ImageArrayDisplay : MonoBehaviour
     {
         if (resourcesPath != null)
         {
-            imageOutlineMaterial.SetColor("_OutlineColor", borderColor);
-            imageOutlineMaterial.SetFloat("_OutlineThickness", borderThickness);
             Sprite[] files = Resources.LoadAll<Sprite>(resourcesPath);
             files = files.OrderBy(s => ExtractNumber(s.name)).ToArray();
             int currentRow = 0;
@@ -43,11 +44,23 @@ public class ImageArrayDisplay : MonoBehaviour
 
                 GameObject imageObject = new GameObject(sprite.name);
                 imageObject.transform.SetParent(transform);
-                imageObject.transform.position = new Vector3(transform.position.x + currentCol * (sprite.rect.width + 5), transform.position.y - currentRow * (sprite.rect.height + 5), transform.position.z);
-                
+
+                //Add Image component before setting position so the object gets a RectTransform
                 Image image = imageObject.AddComponent<Image>();
                 image.sprite = sprite;
-                image.material = imageOutlineMaterial;
+
+                RectTransform imageRect = imageObject.GetComponent<RectTransform>();
+                imageObject.transform.localScale = new Vector3(imageScale, imageScale, 1f);
+                imageObject.transform.position = new Vector3(transform.position.x + currentCol * (imageRect.rect.width * imageScale + imageOffset), transform.position.y - currentRow * (imageRect.rect.height * imageScale + imageOffset), transform.position.z);
+
+                GameObject outlineObject = new GameObject("Outline");
+                outlineObject.transform.SetParent(imageObject.transform);
+
+                Image outline = outlineObject.AddComponent<Image>();
+                outline.type = Image.Type.Sliced;
+                outline.sprite = outlineSprite;
+                outlineObject.GetComponent<RectTransform>().localPosition = Vector3.zero;
+                outlineObject.GetComponent<RectTransform>().localScale = new Vector2(1.2f, 1.2f);
 
                 currentCol++;
             }
