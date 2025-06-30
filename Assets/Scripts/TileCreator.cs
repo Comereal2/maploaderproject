@@ -11,7 +11,7 @@ public class TileCreator : MonoBehaviour
         West = 3
     }
 
-    public static TileCreator tileCreator;
+    public static TileCreator Instance;
     private Sprite selectedBrush;
     private bool isResource = false;
 
@@ -21,14 +21,14 @@ public class TileCreator : MonoBehaviour
 
     private void Awake()
     {
-        if (tileCreator == null)
+        if (Instance == null)
         {
-            tileCreator = this;
+            Instance = this;
         }
         else
         {
-            Destroy(tileCreator);
-            tileCreator = this;
+            Destroy(Instance);
+            Instance = this;
             Debug.LogWarning("Tile creator replaced, was this meant to happen?");
         }
     }

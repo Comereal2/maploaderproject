@@ -12,7 +12,7 @@ public class MapCreatorInputHandler : MonoBehaviour
     [SerializeField] private Slider heightSlider;
     [SerializeField] private Button generateMapInfoButton;
 
-    [HideInInspector] public static MapCreatorInputHandler mapCreatorInputHandler;
+    [HideInInspector] public static MapCreatorInputHandler Instance;
 
     private int tileHeight;
     private bool isPlacing = false;
@@ -20,14 +20,14 @@ public class MapCreatorInputHandler : MonoBehaviour
 
     private void Awake()
     {
-        if (mapCreatorInputHandler == null)
+        if (!Instance)
         {
-            mapCreatorInputHandler = this;
+            Instance = this;
         }
         else
         {
-            Destroy(mapCreatorInputHandler);
-            mapCreatorInputHandler = this;
+            Destroy(Instance);
+            Instance = this;
             Debug.LogWarning("Map creator input handler replaced, was this meant to happen?");
         }
         generateMapInfoButton.onClick.AddListener(GenerateMapInformation);
@@ -35,7 +35,7 @@ public class MapCreatorInputHandler : MonoBehaviour
 
     private void Update()
     {
-        if (heightSlider != null) tileHeight = (int)heightSlider.value;
+        if (!heightSlider) tileHeight = (int)heightSlider.value;
         if (Input.GetKeyDown(KeyCode.Mouse0) && (!isPlacing || canDragClick))
         {
             isPlacing = true;
@@ -57,12 +57,12 @@ public class MapCreatorInputHandler : MonoBehaviour
                     if (result.gameObject.CompareTag(ImageArrayDisplay.ImageTag.ResourceGUIItem.ToString()))
                     {
                         Debug.Log("Resource Selected");
-                        TileCreator.tileCreator.SetSelection(result.gameObject.GetComponent<Image>().sprite, true);
+                        TileCreator.Instance.SetSelection(result.gameObject.GetComponent<Image>().sprite, true);
                     }
                     else if (result.gameObject.CompareTag(ImageArrayDisplay.ImageTag.TileGUIItem.ToString()))
                     {
                         Debug.Log("Tile Selected");
-                        TileCreator.tileCreator.SetSelection(result.gameObject.GetComponent<Image>().sprite, false);
+                        TileCreator.Instance.SetSelection(result.gameObject.GetComponent<Image>().sprite, false);
                     }
                 }
             }
@@ -70,7 +70,7 @@ public class MapCreatorInputHandler : MonoBehaviour
             {
                 Vector3 tilePosition = GetTileLocation(pointerData.position);
                 bool isEditingTile = EmptyTile(new Vector2(tilePosition.x, tilePosition.z));
-                TileCreator.tileCreator.PlaceTile(GetTileDirection(), tilePosition, isEditingTile);
+                TileCreator.Instance.PlaceTile(GetTileDirection(), tilePosition, isEditingTile);
             }
         }
         if (Input.GetKeyUp(KeyCode.Mouse0))
@@ -92,20 +92,15 @@ public class MapCreatorInputHandler : MonoBehaviour
     private TileCreator.TileDirection GetTileDirection()
     {
         int direction = GameObject.FindGameObjectWithTag("TileTypeGUIItem").GetComponent<TMP_Dropdown>().value;
-        switch (direction)
+        return direction switch
         {
-            case 0:
-                return TileCreator.TileDirection.FullTile;
-            case 1:
-                return TileCreator.TileDirection.North;
-            case 2:
-                return TileCreator.TileDirection.East;
-            case 3:
-                return TileCreator.TileDirection.South;
-            case 4:
-                return TileCreator.TileDirection.West;
-        }
-        return TileCreator.TileDirection.FullTile;
+            0 => TileCreator.TileDirection.FullTile,
+            1 => TileCreator.TileDirection.North,
+            2 => TileCreator.TileDirection.East,
+            3 => TileCreator.TileDirection.South,
+            4 => TileCreator.TileDirection.West,
+            _ => TileCreator.TileDirection.FullTile,
+        };
     }
 
     private Vector3 GetTileLocation(Vector2 pointerPosition)
@@ -145,7 +140,7 @@ public class MapCreatorInputHandler : MonoBehaviour
 
     private void GenerateMapInformation()
     {
-        var mapBoundaries = TileCreator.tileCreator.mapBoundaries;
+        var mapBoundaries = TileCreator.Instance.mapBoundaries;
         if (mapBoundaries[0, 0] == int.MaxValue) return;
 
         int tileByteSize = MapInterpreter.tileByteSize;
