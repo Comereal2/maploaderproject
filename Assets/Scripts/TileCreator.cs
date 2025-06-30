@@ -1,4 +1,5 @@
 using UnityEngine;
+using static TileCreator;
 
 public class TileCreator : MonoBehaviour
 {
@@ -41,6 +42,17 @@ public class TileCreator : MonoBehaviour
     {
         if (selectedBrush == null) return;
         GameObject tile;
+        if (isResource)
+        {
+            tile = GetTile(tilePosition);
+            if(tile == null)
+            {
+                tile = CreateEmptyTile();
+                tile.transform.localPosition = tilePosition;
+            }
+            SetResourceSprite(tile.transform);
+            return;
+        }
         if (!isEditingTile)
         {
             tile = CreateEmptyTile();
@@ -51,23 +63,13 @@ public class TileCreator : MonoBehaviour
             tile = GetTile(tilePosition);
         }
 
-        switch (tileDirection)
+        if(tileDirection == TileDirection.FullTile)
         {
-            case TileDirection.FullTile:
-                SetTileSprite(tile.transform);
-                break;
-            case TileDirection.North:
-                SetTilePartSprite(tile.transform.GetChild(0), tileDirection);
-                break;
-            case TileDirection.East:
-                SetTilePartSprite(tile.transform.GetChild(1), tileDirection);
-                break;
-            case TileDirection.South:
-                SetTilePartSprite(tile.transform.GetChild(2), tileDirection);
-                break;
-            case TileDirection.West:
-                SetTilePartSprite(tile.transform.GetChild(3), tileDirection);
-                break;
+            SetTileSprite(tile.transform);
+        }
+        else
+        {
+            SetTilePartSprite(tile.transform, tileDirection);
         }
     }
 
@@ -82,7 +84,11 @@ public class TileCreator : MonoBehaviour
     private GameObject GetTile(Vector3 tilePosition)
     {
         Collider[] hits = Physics.OverlapBox(tilePosition, tilePosition);
-        return hits[0].gameObject;
+        if(hits.Length > 0)
+        {
+            return hits[0].gameObject;
+        }
+        return null;
     }
 
     private void SetTileSprite(Transform parentTransform)
@@ -103,9 +109,28 @@ public class TileCreator : MonoBehaviour
         }
     }
 
-    private void SetTilePartSprite(Transform transform, TileDirection terrainRotation)
+    private void SetTilePartSprite(Transform parentTransform, TileDirection terrainRotation)
     {
         Sprite[] sprites = Resources.LoadAll<Sprite>($"Tiles/{selectedBrush.name}");
-        transform.GetComponent<SpriteRenderer>().sprite = sprites[(int)terrainRotation];
+        switch (terrainRotation)
+        {
+            case TileDirection.North:
+                parentTransform.GetChild(0).GetComponent<SpriteRenderer>().sprite = sprites[(int)terrainRotation];
+                break;
+            case TileDirection.East:
+                parentTransform.GetChild(1).GetComponent<SpriteRenderer>().sprite = sprites[(int)terrainRotation];
+                break;
+            case TileDirection.South:
+                parentTransform.GetChild(2).GetComponent<SpriteRenderer>().sprite = sprites[(int)terrainRotation];
+                break;
+            case TileDirection.West:
+                parentTransform.GetChild(3).GetComponent<SpriteRenderer>().sprite = sprites[(int)terrainRotation];
+                break;
+        }
+    }
+
+    private void SetResourceSprite(Transform parentTransform)
+    {
+        parentTransform.GetChild(4).GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>($"Resources/{selectedBrush.name}");
     }
 }

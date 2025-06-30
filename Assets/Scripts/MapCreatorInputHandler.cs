@@ -140,7 +140,6 @@ public class MapCreatorInputHandler : MonoBehaviour
                 }
                 Destroy(hit.gameObject);
             }
-            return false;
         }
         return false;
     }
