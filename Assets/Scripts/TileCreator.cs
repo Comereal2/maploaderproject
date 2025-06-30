@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class TileCreator : MonoBehaviour
 {
-    public enum TileDirection
+    public enum TileDirection : int
     {
-        FullTile,
-        North,
-        East,
-        South,
-        West
+        FullTile = 5,
+        North = 0,
+        East = 1,
+        South = 2,
+        West = 3
     }
 
     public static TileCreator tileCreator;
@@ -39,13 +39,12 @@ public class TileCreator : MonoBehaviour
 
     public void PlaceTile(TileDirection tileDirection, Vector3 tilePosition, bool isEditingTile)
     {
-        Debug.Log($"Placing tile at {tilePosition} with direction of {tileDirection} and tile type of {selectedBrush}, which is {isResource} a resource");
+        if (selectedBrush == null) return;
         GameObject tile;
         if (!isEditingTile)
         {
-            tile = Instantiate(tilePrefab, transform);
+            tile = CreateEmptyTile();
             tile.transform.localPosition = tilePosition;
-            tile.name = $"{selectedBrush.name} Resource";
         }
         else
         {
@@ -55,24 +54,29 @@ public class TileCreator : MonoBehaviour
         switch (tileDirection)
         {
             case TileDirection.FullTile:
-                SetTilePartSprite(transform.GetChild(0));
-                SetTilePartSprite(transform.GetChild(1));
-                SetTilePartSprite(transform.GetChild(2));
-                SetTilePartSprite(transform.GetChild(3));
+                SetTileSprite(tile.transform);
                 break;
             case TileDirection.North:
-                SetTilePartSprite(transform.GetChild(0));
+                SetTilePartSprite(tile.transform.GetChild(0), tileDirection);
                 break;
             case TileDirection.East:
-                SetTilePartSprite(transform.GetChild(1));
+                SetTilePartSprite(tile.transform.GetChild(1), tileDirection);
                 break;
             case TileDirection.South:
-                SetTilePartSprite(transform.GetChild(2));
+                SetTilePartSprite(tile.transform.GetChild(2), tileDirection);
                 break;
             case TileDirection.West:
-                SetTilePartSprite(transform.GetChild(3));
+                SetTilePartSprite(tile.transform.GetChild(3), tileDirection);
                 break;
         }
+    }
+
+    private GameObject CreateEmptyTile()
+    {
+        GameObject tile = Instantiate(tilePrefab, transform);
+        tile.name = $"{selectedBrush.name} Tile";
+        SetTileSprite(tile.transform, "Terrain0");
+        return tile;
     }
 
     private GameObject GetTile(Vector3 tilePosition)
@@ -81,8 +85,27 @@ public class TileCreator : MonoBehaviour
         return hits[0].gameObject;
     }
 
-    private void SetTilePartSprite(Transform transform)
+    private void SetTileSprite(Transform parentTransform)
     {
-        transform.GetComponent<SpriteRenderer>().sprite = selectedBrush;
+        Sprite[] sprites = Resources.LoadAll<Sprite>($"Tiles/{selectedBrush.name}");
+        for(int i = 0; i < 4; i++)
+        {
+            parentTransform.GetChild(i).GetComponent<SpriteRenderer>().sprite = sprites[i];
+        }
+    }
+
+    private void SetTileSprite(Transform parentTransform, string brush)
+    {
+        Sprite[] sprites = Resources.LoadAll<Sprite>($"Tiles/{brush}");
+        for (int i = 0; i < 4; i++)
+        {
+            parentTransform.GetChild(i).GetComponent<SpriteRenderer>().sprite = sprites[i];
+        }
+    }
+
+    private void SetTilePartSprite(Transform transform, TileDirection terrainRotation)
+    {
+        Sprite[] sprites = Resources.LoadAll<Sprite>($"Tiles/{selectedBrush.name}");
+        transform.GetComponent<SpriteRenderer>().sprite = sprites[(int)terrainRotation];
     }
 }
