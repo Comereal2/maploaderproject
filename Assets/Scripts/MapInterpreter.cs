@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -12,7 +14,7 @@ public class MapInterpreter : MonoBehaviour
 
     [SerializeField] private AssetReference assetReference;
 
-    private static int tileByteSize = 3;
+    [HideInInspector] public static int tileByteSize = 3;
 
     private void Awake()
     {
@@ -30,6 +32,7 @@ public class MapInterpreter : MonoBehaviour
             }
         }
         resources = Resources.LoadAll<Sprite>("Resources");
+        resources = resources.OrderBy(s => ExtractNumber(s.name)).ToArray();
     }
 
     private void Start()
@@ -89,7 +92,7 @@ public class MapInterpreter : MonoBehaviour
                 GameObject tile = CreateTileMashup(tileInformation);
                 tile.name = $"Tile {j}";
                 tile.transform.localScale = new Vector3(1.8f, 1, 1.8f);
-                Instantiate(tile, new Vector3(j, (uint)(tileInformation[2] & 0x0F), i), Quaternion.Euler(0, 45, 0), currentRowParent.transform);
+                Instantiate(tile, new Vector3(j, (uint)(tileInformation[2] & 0x0F), -i), Quaternion.identity, currentRowParent.transform);
             }
         }
     }
@@ -106,5 +109,15 @@ public class MapInterpreter : MonoBehaviour
         //5th child of tile is the resource renderer
         tile.transform.GetChild(4).GetComponent<SpriteRenderer>().sprite = resources[(uint)((chunk[2] & 0xF0) >> 4)];
         return tile;
+    }
+
+    private int ExtractNumber(string name)
+    {
+        var match = Regex.Match(name, @"(\d+)$");
+        if (match.Success)
+        {
+            return int.Parse(match.Value);
+        }
+        return int.MaxValue;
     }
 }

@@ -1,5 +1,4 @@
 using UnityEngine;
-using static TileCreator;
 
 public class TileCreator : MonoBehaviour
 {
@@ -17,6 +16,8 @@ public class TileCreator : MonoBehaviour
     private bool isResource = false;
 
     [SerializeField] private GameObject tilePrefab;
+
+    [HideInInspector] public int[,] mapBoundaries = { { int.MaxValue, int.MinValue }, { int.MaxValue, int.MinValue } };
 
     private void Awake()
     {
@@ -41,6 +42,24 @@ public class TileCreator : MonoBehaviour
     public void PlaceTile(TileDirection tileDirection, Vector3 tilePosition, bool isEditingTile)
     {
         if (selectedBrush == null) return;
+        tilePosition = new Vector3(Mathf.Round(tilePosition.x), Mathf.Round(tilePosition.y), Mathf.Round(tilePosition.z));
+        int[] mapTilePosition = { (int)tilePosition.x, (int)tilePosition.z };
+        if (mapTilePosition[0] < mapBoundaries[0, 0])
+        {
+            mapBoundaries[0, 0] = mapTilePosition[0];
+        }
+        else if(mapTilePosition[0] > mapBoundaries[0, 1])
+        {
+            mapBoundaries[0, 1] = mapTilePosition[0];
+        }
+        if (mapTilePosition[1] < mapBoundaries[1, 0])
+        {
+            mapBoundaries[1, 0] = mapTilePosition[1];
+        }
+        else if (mapTilePosition[1] > mapBoundaries[1, 1])
+        {
+            mapBoundaries[1, 1] = mapTilePosition[1];
+        }
         GameObject tile;
         if (isResource)
         {
@@ -48,6 +67,7 @@ public class TileCreator : MonoBehaviour
             if(tile == null)
             {
                 tile = CreateEmptyTile();
+                tile.name = $"Tile {tilePosition.x}_{tilePosition.y}_{tilePosition.z}";
                 tile.transform.localPosition = tilePosition;
             }
             SetResourceSprite(tile.transform);
@@ -56,10 +76,13 @@ public class TileCreator : MonoBehaviour
         if (!isEditingTile)
         {
             tile = CreateEmptyTile();
+            tile.name = $"Tile {tilePosition.x}_{tilePosition.y}_{tilePosition.z}";
             tile.transform.localPosition = tilePosition;
+            Debug.Log($"Creating new tile at {tilePosition.x}_{tilePosition.y}_{tilePosition.z}");
         }
         else
         {
+            Debug.Log($"Finding existing tile at {tilePosition.x}_{tilePosition.y}_{tilePosition.z}");
             tile = GetTile(tilePosition);
         }
 
@@ -76,14 +99,13 @@ public class TileCreator : MonoBehaviour
     private GameObject CreateEmptyTile()
     {
         GameObject tile = Instantiate(tilePrefab, transform);
-        tile.name = $"{selectedBrush.name} Tile";
         SetTileSprite(tile.transform, "Terrain0");
         return tile;
     }
 
     private GameObject GetTile(Vector3 tilePosition)
     {
-        Collider[] hits = Physics.OverlapBox(tilePosition, tilePosition);
+        Collider[] hits = Physics.OverlapBox(tilePosition, new Vector3(0.1f, 0.1f, 0.1f));
         if(hits.Length > 0)
         {
             return hits[0].gameObject;

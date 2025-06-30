@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -9,14 +9,14 @@ using UnityEngine.UI;
 public class MapCreatorInputHandler : MonoBehaviour
 {
     [SerializeField] private InputActionAsset inputMap;
-    [SerializeField] private GameObject heightSliderObject;
+    [SerializeField] private Slider heightSlider;
+    [SerializeField] private Button generateMapInfoButton;
 
     [HideInInspector] public static MapCreatorInputHandler mapCreatorInputHandler;
 
     private int tileHeight;
     private bool isPlacing = false;
     private bool canDragClick = false;
-    private Slider heightSlider;
 
     private void Awake()
     {
@@ -30,7 +30,7 @@ public class MapCreatorInputHandler : MonoBehaviour
             mapCreatorInputHandler = this;
             Debug.LogWarning("Map creator input handler replaced, was this meant to happen?");
         }
-        heightSlider = heightSliderObject.GetComponent<Slider>();
+        generateMapInfoButton.onClick.AddListener(GenerateMapInformation);
     }
 
     private void Update()
@@ -68,9 +68,8 @@ public class MapCreatorInputHandler : MonoBehaviour
             }
             else
             {
-                Debug.Log("Map element hit!");
                 Vector3 tilePosition = GetTileLocation(pointerData.position);
-                bool isEditingTile = EmptyTile(tilePosition);
+                bool isEditingTile = EmptyTile(new Vector2(tilePosition.x, tilePosition.z));
                 TileCreator.tileCreator.PlaceTile(GetTileDirection(), tilePosition, isEditingTile);
             }
         }
@@ -142,5 +141,101 @@ public class MapCreatorInputHandler : MonoBehaviour
             }
         }
         return false;
+    }
+
+    private void GenerateMapInformation()
+    {
+        var mapBoundaries = TileCreator.tileCreator.mapBoundaries;
+        if (mapBoundaries[0, 0] == int.MaxValue) return;
+
+        int tileByteSize = MapInterpreter.tileByteSize;
+        // Adjust xCount and yCount for inclusive boundaries.
+        int xCount = mapBoundaries[0, 1] - mapBoundaries[0, 0] + 1;
+        int yCount = mapBoundaries[1, 1] - mapBoundaries[1, 0] + 1;
+        byte[] mapInformation = new byte[4 + xCount * yCount * tileByteSize];
+
+        // Store xCount as the first 4 bytes.
+        Array.Copy(BitConverter.GetBytes((uint)xCount), 0, mapInformation, 0, 4);
+
+        // Loop left->right (x axis) for each row starting from the top row moving down.
+        for (int yIndex = 0; yIndex < yCount; yIndex++)
+        {
+            int j = mapBoundaries[1, 1] - yIndex; // top (inclusive) to bottom
+            for (int xIndex = 0; xIndex < xCount; xIndex++)
+            {
+                int i = mapBoundaries[0, 0] + xIndex;
+                int offset = 4 + ((yIndex * xCount) + xIndex) * tileByteSize;
+                GameObject tile = FindTile(new Vector2(i, j));
+
+                if (tile == null)
+                {
+                    for (int k = 0; k < tileByteSize; k++)
+                    {
+                        mapInformation[offset + k] = 0;
+                    }
+                    continue;
+                }
+                for (int k = 0; k < tileByteSize; k++)
+                {
+                    mapInformation[offset + k] = 0;
+                }
+                for (int k = 0; k < 5; k++)
+                {
+                    byte spriteValue = (byte)(ConvertSpriteToValue(tile.transform.GetChild(k)) & 0x0F);
+                    int targetIndex = offset + (k / 2);
+
+                    if (k % 2 == 0)
+                    {
+                        // For even k: set the lower 4 bits
+                        mapInformation[targetIndex] = (byte)((mapInformation[targetIndex] & 0x0F) | spriteValue << 4);
+                    }
+                    else
+                    {
+                        // For odd k: set the upper 4 bits
+                        mapInformation[targetIndex] = (byte)((mapInformation[targetIndex] & 0xF0) | (spriteValue));
+                    }
+                }
+                mapInformation[offset + 2] = (byte)((mapInformation[offset + 2] & 0xF0) | ((UInt16)tileHeight));
+            }
+        }
+        CreateMapFile(mapInformation);
+    }
+
+    private GameObject FindTile(Vector2 coordinates)
+    {
+        // Construct regex pattern: "Tile {coordinates.x}_{anything}_{coordinates.y}"
+        string pattern = $"^Tile {coordinates.x}_.*_{coordinates.y}$";
+        System.Text.RegularExpressions.Regex regex = new System.Text.RegularExpressions.Regex(pattern);
+
+        // Find all GameObjects in the scene
+        GameObject[] allObjects = FindObjectsOfType<GameObject>();
+        foreach (GameObject obj in allObjects)
+        {
+            if (regex.IsMatch(obj.name))
+            {
+                Debug.Log($"{obj.name} found");
+                return obj;
+            }
+        }
+        Debug.Log($"Tile {coordinates.x}_*_{coordinates.y} not found, generating empty...");
+        return null;
+    }
+
+    private byte ConvertSpriteToValue(Transform transform)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(transform.GetComponent<SpriteRenderer>().sprite.name, @"\d+");
+        if (match.Success)
+        {
+            return (byte)int.Parse(match.Value);
+        }
+        return 0;
+    }
+
+    private void CreateMapFile(byte[] mapInformation)
+    {
+        string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        string filePath = System.IO.Path.Combine(desktopPath, "map.bytes");
+        System.IO.File.WriteAllBytes(filePath, mapInformation);
+        Debug.Log("Map file created at " + filePath);
     }
 }
