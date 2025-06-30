@@ -1,0 +1,12 @@
+{
+    "name": "MapCreatorInputMap",
+    "maps": [
+        {
+            "name": "UIShortcuts",
+            "id": "2f12cde7-fc35-4bba-8fe2-fa11ef38b2cd",
+            "actions": [],
+            "bindings": []
+        }
+    ],
+    "controlSchemes": []
+}

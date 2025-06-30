@@ -11,6 +11,8 @@ public class ImageArrayDisplay : MonoBehaviour
     [SerializeField] private float imageOffset = 10f;
     [SerializeField] private int imageAmountPerRow;
     [SerializeField] private Sprite outlineSprite;
+    [SerializeField] private bool isHighlightable = true;
+    [SerializeField] private Color highlightColor = new(255f, 255f, 255f, 0.1f);
 
     /*[Header("Image border settings")]
     [SerializeField] private Color borderColor = Color.black;
@@ -42,19 +44,22 @@ public class ImageArrayDisplay : MonoBehaviour
                     currentRow++;
                 }
 
-                GameObject imageObject = new GameObject(sprite.name);
-                imageObject.transform.SetParent(transform);
-
-                //Add Image component before setting position so the object gets a RectTransform
-                Image image = imageObject.AddComponent<Image>();
+                Image image = CreateImage(sprite.name, transform);
                 image.sprite = sprite;
 
-                RectTransform imageRect = imageObject.GetComponent<RectTransform>();
-                imageObject.transform.localScale = new Vector3(imageScale, imageScale, 1f);
-                imageObject.transform.position = new Vector3(transform.position.x + currentCol * (imageRect.rect.width * imageScale + imageOffset), transform.position.y - currentRow * (imageRect.rect.height * imageScale + imageOffset), transform.position.z);
+                if (isHighlightable)
+                {
+                    Image panel = CreateImage("HighlightPanel", image.transform);
+                    panel.color = highlightColor;
+                    image.gameObject.AddComponent<SpriteHighlighter>();
+                }
+
+                RectTransform imageRect = image.gameObject.GetComponent<RectTransform>();
+                image.transform.localScale = new Vector3(imageScale, imageScale, 1f);
+                image.transform.position = new Vector3(transform.position.x + currentCol * (imageRect.rect.width * imageScale + imageOffset), transform.position.y - currentRow * (imageRect.rect.height * imageScale + imageOffset), transform.position.z);
 
                 GameObject outlineObject = new GameObject("Outline");
-                outlineObject.transform.SetParent(imageObject.transform);
+                outlineObject.transform.SetParent(image.transform);
 
                 Image outline = outlineObject.AddComponent<Image>();
                 outline.type = Image.Type.Sliced;
@@ -79,6 +84,14 @@ public class ImageArrayDisplay : MonoBehaviour
             return int.Parse(match.Value);
         }
         return int.MaxValue;
+    }
+
+    private Image CreateImage(string name, Transform parent)
+    {
+        GameObject imageObject = new GameObject(name);
+        imageObject.transform.SetParent(parent);
+        imageObject.transform.localPosition = Vector3.zero;
+        return imageObject.AddComponent<Image>();
     }
 
 #if UNITY_EDITOR
