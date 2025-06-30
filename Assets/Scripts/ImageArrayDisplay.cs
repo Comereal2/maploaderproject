@@ -6,6 +6,13 @@ using UnityEngine.UI;
 
 public class ImageArrayDisplay : MonoBehaviour
 {
+    [HideInInspector] public enum ImageTag
+    {
+        None,
+        ResourceGUIItem,
+        TileGUIItem
+    }
+
     [Header("Image information")]
     [SerializeField] private float imageScale = 1f;
     [SerializeField] private float imageOffset = 10f;
@@ -13,10 +20,7 @@ public class ImageArrayDisplay : MonoBehaviour
     [SerializeField] private Sprite outlineSprite;
     [SerializeField] private bool isHighlightable = true;
     [SerializeField] private Color highlightColor = new(255f, 255f, 255f, 0.1f);
-
-    /*[Header("Image border settings")]
-    [SerializeField] private Color borderColor = Color.black;
-    [SerializeField] private float borderThickness = 1f;*/
+    [SerializeField] private ImageTag imageTag;
 
 #if UNITY_EDITOR
     [Header("Folder from Assets/Resources/...")]
@@ -46,6 +50,7 @@ public class ImageArrayDisplay : MonoBehaviour
 
                 Image image = CreateImage(sprite.name, transform);
                 image.sprite = sprite;
+                if (imageTag != ImageTag.None) { image.tag = imageTag.ToString(); }
 
                 if (isHighlightable)
                 {
